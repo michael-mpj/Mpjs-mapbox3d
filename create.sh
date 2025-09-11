@@ -1,10 +1,9 @@
-
 #!/bin/bash
 
 # -------------------------------
 # Project Setup
 # -------------------------------
-PROJECT_NAME="mpjs-mapbox3d"
+PROJECT_NAME="mpjs-mapbox3D"
 NODE_VERSION=$(node -v)
 echo "🟢 Setting up $PROJECT_NAME (Node $NODE_VERSION)"
 
@@ -31,14 +30,15 @@ cat <<EOL > package.json
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "mapbox-gl": "^2.21.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.8"
+    "vite": "^7.1.5"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   }
 }
 EOL
@@ -66,7 +66,7 @@ cat <<EOL > index.html
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Treweler Features Showcase</title>
+    <title>Mpjs-mapbox3D Features Showcase</title>
   </head>
   <body>
     <div id="root"></div>
@@ -120,7 +120,7 @@ PRO_FEATURES=(
 )
 
 # -------------------------------
-# Create JSX Component Function
+# Create JSX Component Function with Mapbox 3D
 # -------------------------------
 create_component() {
     local DIR=$1
@@ -130,11 +130,60 @@ create_component() {
     FILE="$DIR/$NAME.jsx"
     if [ ! -f "$FILE" ]; then
         cat <<EOL > "$FILE"
+import React, { useEffect, useRef } from "react";
+import mapboxgl from "mapbox-gl";
+
+// Mapbox token
+mapboxgl.accessToken = process.env.VITE_MAPBOX_TOKEN || "YOUR_MAPBOX_TOKEN";
+
 export default function $NAME() {
+  const mapContainer = useRef(null);
+
+  useEffect(() => {
+    if (!mapContainer.current) return;
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [0, 0],
+      zoom: 2,
+      pitch: 45,
+      bearing: -17.6
+    });
+
+    // 3D terrain & buildings
+    map.on("load", () => {
+      map.addSource("mapbox-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        tileSize: 512,
+        maxzoom: 14
+      });
+      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
+      map.addLayer({
+        id: "3d-buildings",
+        source: "composite",
+        "source-layer": "building",
+        filter: ["==", "extrude", "true"],
+        type: "fill-extrusion",
+        minzoom: 15,
+        paint: {
+          "fill-extrusion-color": "#aaa",
+          "fill-extrusion-height": ["get", "height"],
+          "fill-extrusion-base": ["get", "min_height"],
+          "fill-extrusion-opacity": 0.6
+        }
+      });
+    });
+
+    return () => map.remove();
+  }, []);
+
   return (
-    <section style={{ border: "1px solid #ccc", padding: "1rem", margin: "1rem 0", borderRadius: "8px" }}>
+    <section style={{ margin: "1rem 0", border: "1px solid #ccc", borderRadius: "8px", padding: "1rem" }}>
       <h3>$NAME</h3>
       <p>$DESC</p>
+      <div ref={mapContainer} style={{ width: "100%", height: "300px", marginTop: "1rem" }} />
     </section>
   );
 }
@@ -147,7 +196,7 @@ EOL
 # -------------------------------
 CORE_DIR="src/components/core"
 for f in "${CORE_FEATURES[@]}"; do
-    create_component "$CORE_DIR" "$f" "This is the core feature: $f."
+    create_component "$CORE_DIR" "$f" "Core feature: $f"
 done
 
 CORE_INDEX="$CORE_DIR/index.js"
@@ -161,7 +210,7 @@ done
 # -------------------------------
 PRO_DIR="src/components/pro"
 for f in "${PRO_FEATURES[@]}"; do
-    create_component "$PRO_DIR" "$f" "This is the pro/premium feature: $f."
+    create_component "$PRO_DIR" "$f" "Pro/premium feature: $f"
 done
 
 PRO_INDEX="$PRO_DIR/index.js"
@@ -173,8 +222,7 @@ done
 # -------------------------------
 # FeatureWrapper.jsx
 # -------------------------------
-WRAPPER_FILE="src/components/FeatureWrapper.jsx"
-cat <<EOL > "$WRAPPER_FILE"
+cat <<EOL > src/components/FeatureWrapper.jsx
 export default function FeatureWrapper({ children }) {
   return (
     <div style={{ margin: "1rem 0", padding: "1rem", border: "1px solid #888", borderRadius: "8px", background: "#f9f9f9" }}>
@@ -187,8 +235,7 @@ EOL
 # -------------------------------
 # App.jsx
 # -------------------------------
-APP_FILE="src/App.jsx"
-cat <<EOL > "$APP_FILE"
+cat <<EOL > src/App.jsx
 import React from "react";
 import FeatureWrapper from "./components/FeatureWrapper";
 import * as CoreFeatures from "./components/core";
@@ -197,7 +244,7 @@ import * as ProFeatures from "./components/pro";
 export default function App() {
   return (
     <main style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>🌍 Treweler Features Showcase</h1>
+      <h1>🌍 Mpjs-mapbox3D Features Showcase</h1>
 
       <section>
         <h2>Core Features</h2>
@@ -226,8 +273,7 @@ EOL
 # -------------------------------
 # main.jsx
 # -------------------------------
-MAIN_FILE="src/main.jsx"
-cat <<EOL > "$MAIN_FILE"
+cat <<EOL > src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
@@ -240,11 +286,17 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 EOL
 
 # -------------------------------
+# .env file
+# -------------------------------
+cat <<EOL > .env
+VITE_MAPBOX_TOKEN=YOUR_MAPBOX_ACCESS_TOKEN
+EOL
+
+# -------------------------------
 # FEATURES.md
 # -------------------------------
-FEATURES_MD="docs/FEATURES.md"
-cat <<EOL > "$FEATURES_MD"
-# 📌 Treweler Features
+cat <<EOL > docs/FEATURES.md
+# 📌 Mpjs-mapbox3D Features
 
 ## Core Features
 - Fully integrated with WordPress & Mapbox
@@ -284,5 +336,5 @@ cat <<EOL > "$FEATURES_MD"
 - Alternative Map Projections (Globe, Equal Earth, Lambert, etc.)
 EOL
 
-echo "✅ Full project + docs created!"
+echo "✅ Mpjs-mapbox3D project scaffold with Mapbox 3D placeholders created!"
 echo "Run 'npm install' and 'npm run dev' to start your app."
