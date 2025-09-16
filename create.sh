@@ -1,7 +1,4 @@
 #!/bin/bash
-
-# Your existing script content goes #!/bin/bash
-
 # -------------------------------
 # Project Setup
 # -------------------------------
