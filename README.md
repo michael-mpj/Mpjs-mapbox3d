@@ -25,7 +25,7 @@ It includes **Core and Pro features**, 3D terrain, 3D buildings, markers, routes
 
 ## 📌 Core Features
 
-- Fully integrated with WordPress & Mapbox
+- Fully integrated with react & Mapbox
 - Multiple maps management
 - Shortcode embedding
 - Pre-installed Mapbox styles & custom styles
